@@ -14,14 +14,17 @@ const applicationSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: [
-        "applied",
-        "shortlisted",
-        "interview",
-        "selected",
-        "joined",
-        "rejected",
-      ],
+      enum: {
+        values: [
+          "applied",
+          "shortlisted",
+          "interview",
+          "selected",
+          "joined",
+          "rejected",
+        ],
+        message: "{VALUE} is not a valid status",
+      },
       default: "applied",
     },
   },

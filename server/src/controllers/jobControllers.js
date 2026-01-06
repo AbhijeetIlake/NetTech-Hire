@@ -1,150 +1,162 @@
 import Job from "../models/Job.js";
+import asyncHandler from "../middleware/asyncHandler.js";
 
 /* ===============================
-   PUBLIC / COMMON
+   APPLICANT SIDE
 ================================ */
 
-export const getJobs = async (req, res) => {
-  try {
-    const jobs = await Job.find({ isActive: true })
-      .populate("company", "name email")
-      .sort({ createdAt: -1 });
+// @desc    Get all active jobs
+// @route   GET /api/jobs
+// @access  Private (Applicant)
+export const getActiveJobs = asyncHandler(async (req, res) => {
+  const jobs = await Job.find({ isActive: true })
+    .populate("company", "name email")
+    .sort({ createdAt: -1 });
 
-    res.status(200).json(jobs);
-  } catch (error) {
-    console.error("Get Jobs Error:", error);
-    res.status(500).json({ message: "Server Error (Get Jobs)" });
+  res.status(200).json(jobs);
+});
+
+// @desc    Get job details
+// @route   GET /api/jobs/:id
+// @access  Private (Applicant)
+export const getJobDetails = asyncHandler(async (req, res) => {
+  const job = await Job.findOne({
+    _id: req.params.id,
+    isActive: true,
+  }).populate("company", "name email");
+
+  if (!job) {
+    res.status(404);
+    throw new Error("Job not found or closed");
   }
-};
+
+  res.status(200).json(job);
+});
 
 /* ===============================
    COMPANY SIDE
 ================================ */
 
-export const createJob = async (req, res) => {
-  try {
-    const { title, description, location, jobType } = req.body;
+// @desc    Create a new job
+// @route   POST /api/jobs
+// @access  Private (Company)
+export const createJob = asyncHandler(async (req, res) => {
+  const { title, description, location, jobType } = req.body;
 
-    if (!title || !description) {
-      return res
-        .status(400)
-        .json({ message: "Title and description are required" });
-    }
-
-    const job = await Job.create({
-      title,
-      description,
-      location,
-      jobType,
-      company: req.user._id,
-    });
-
-    res.status(201).json(job);
-  } catch (error) {
-    console.error("Create Job Error:", error);
-    res.status(500).json({ message: "Server Error (Create Job)" });
+  if (!title || !description) {
+    res.status(400);
+    throw new Error("Title and description are required");
   }
-};
 
-export const getMyJobs = async (req, res) => {
-  try {
-    const jobs = await Job.find({ company: req.user._id }).sort({
-      createdAt: -1,
-    });
+  const job = await Job.create({
+    title,
+    description,
+    location,
+    jobType,
+    company: req.user._id,
+  });
 
-    res.status(200).json(jobs);
-  } catch (error) {
-    console.error("Get My Jobs Error:", error);
-    res.status(500).json({ message: "Server Error (My Jobs)" });
+  res.status(201).json(job);
+});
+
+// @desc    Get jobs created by the logged-in company
+// @route   GET /api/jobs/my
+// @access  Private (Company)
+export const getMyJobs = asyncHandler(async (req, res) => {
+  const jobs = await Job.find({ company: req.user._id }).sort({
+    createdAt: -1,
+  });
+
+  res.status(200).json(jobs);
+});
+
+// @desc    Get a single job by ID (Company side)
+// @route   GET /api/jobs/:id/company
+// @access  Private (Company)
+export const getJobById = asyncHandler(async (req, res) => {
+  const job = await Job.findById(req.params.id);
+
+  if (!job) {
+    res.status(404);
+    throw new Error("Job not found");
   }
-};
 
-export const getJobById = async (req, res) => {
-  try {
-    const job = await Job.findById(req.params.id);
-
-    if (!job) {
-      return res.status(404).json({ message: "Job not found" });
-    }
-
-    if (job.company.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: "Access denied" });
-    }
-
-    res.status(200).json(job);
-  } catch (error) {
-    console.error("Get Job By Id Error:", error);
-    res.status(500).json({ message: "Server Error (Get Job)" });
+  if (job.company.toString() !== req.user._id.toString()) {
+    res.status(403);
+    throw new Error("Access denied");
   }
-};
 
-export const updateJob = async (req, res) => {
-  try {
-    const job = await Job.findById(req.params.id);
+  res.status(200).json(job);
+});
 
-    if (!job) {
-      return res.status(404).json({ message: "Job not found" });
-    }
+// @desc    Update a job
+// @route   PUT /api/jobs/:id
+// @access  Private (Company)
+export const updateJob = asyncHandler(async (req, res) => {
+  const job = await Job.findById(req.params.id);
 
-    if (job.company.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: "Access denied" });
-    }
-
-    const { title, description, location, jobType, isActive } = req.body;
-
-    if (title !== undefined) job.title = title;
-    if (description !== undefined) job.description = description;
-    if (location !== undefined) job.location = location;
-    if (jobType !== undefined) job.jobType = jobType;
-    if (isActive !== undefined) job.isActive = isActive;
-
-    await job.save();
-
-    res.status(200).json(job);
-  } catch (error) {
-    console.error("Update Job Error:", error);
-    res.status(500).json({ message: "Server Error (Update Job)" });
+  if (!job) {
+    res.status(404);
+    throw new Error("Job not found");
   }
-};
 
-export const closeJob = async (req, res) => {
-  try {
-    const job = await Job.findById(req.params.id);
-
-    if (!job) {
-      return res.status(404).json({ message: "Job not found" });
-    }
-
-    if (job.company.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: "Access denied" });
-    }
-
-    job.isActive = false;
-    await job.save();
-
-    res.status(200).json({ message: "Job closed successfully" });
-  } catch (error) {
-    console.error("Close Job Error:", error);
-    res.status(500).json({ message: "Server Error (Close Job)" });
+  if (job.company.toString() !== req.user._id.toString()) {
+    res.status(403);
+    throw new Error("Access denied");
   }
-};
 
-export const deleteJob = async (req, res) => {
-  try {
-    const job = await Job.findById(req.params.id);
+  const { title, description, location, jobType, isActive } = req.body;
 
-    if (!job) {
-      return res.status(404).json({ message: "Job not found" });
-    }
+  if (title !== undefined) job.title = title;
+  if (description !== undefined) job.description = description;
+  if (location !== undefined) job.location = location;
+  if (jobType !== undefined) job.jobType = jobType;
+  if (isActive !== undefined) job.isActive = isActive;
 
-    if (job.company.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: "Access denied" });
-    }
+  const updatedJob = await job.save();
 
-    await job.deleteOne();
-    res.status(200).json({ message: "Job deleted successfully" });
-  } catch (error) {
-    console.error("Delete Job Error:", error);
-    res.status(500).json({ message: "Server Error (Delete Job)" });
+  res.status(200).json(updatedJob);
+});
+
+// @desc    Close a job
+// @route   PATCH /api/jobs/:id/close
+// @access  Private (Company)
+export const closeJob = asyncHandler(async (req, res) => {
+  const job = await Job.findById(req.params.id);
+
+  if (!job) {
+    res.status(404);
+    throw new Error("Job not found");
   }
-};
+
+  if (job.company.toString() !== req.user._id.toString()) {
+    res.status(403);
+    throw new Error("Access denied");
+  }
+
+  job.isActive = false;
+  await job.save();
+
+  res.status(200).json({ message: "Job closed successfully" });
+});
+
+// @desc    Delete a job
+// @route   DELETE /api/jobs/:id
+// @access  Private (Company)
+export const deleteJob = asyncHandler(async (req, res) => {
+  const job = await Job.findById(req.params.id);
+
+  if (!job) {
+    res.status(404);
+    throw new Error("Job not found");
+  }
+
+  if (job.company.toString() !== req.user._id.toString()) {
+    res.status(403);
+    throw new Error("Access denied");
+  }
+
+  await job.deleteOne();
+  res.status(200).json({ message: "Job deleted successfully" });
+});
+

@@ -4,16 +4,24 @@ const jobSchema = new mongoose.Schema(
   {
     title: {
       type: String,
-      required: true,
+      required: [true, "Job title is required"],
+      trim: true,
     },
     description: {
       type: String,
-      required: true,
+      required: [true, "Job description is required"],
+      trim: true,
     },
-    location: String,
+    location: {
+      type: String,
+      trim: true,
+    },
     jobType: {
       type: String,
-      enum: ["internship", "full-time", "contract"],
+      enum: {
+        values: ["internship", "full-time", "contract"],
+        message: "{VALUE} is not a valid job type",
+      },
     },
     company: {
       type: mongoose.Schema.Types.ObjectId,
