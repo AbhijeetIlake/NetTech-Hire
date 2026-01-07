@@ -1,9 +1,21 @@
-import { loginController, registerController, logoutController } from "../controllers/authControllers.js";
 import express from "express";
-const router = express.Router()
+import {
+    loginUser,
+    registerUser,
+    logoutUser,
+    updateUserProfile,
+    uploadResume,
+} from "../controllers/authControllers.js";
+import { protect } from "../middleware/authMiddleware.js";
+import upload from "../middleware/uploadMiddleware.js";
 
-router.post('/login', loginController)
-router.post('/register', registerController)
-router.post('/logout', logoutController)
+const router = express.Router();
+
+router.post("/login", loginUser);
+router.post("/register", registerUser);
+router.post("/logout", logoutUser);
+
+router.put("/profile", protect, updateUserProfile);
+router.put("/resume", protect, upload.single("resume"), uploadResume);
 
 export default router;

@@ -16,12 +16,19 @@ const jobSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    jobType: {
+    salaryRange: {
       type: String,
-      enum: {
-        values: ["internship", "full-time", "contract"],
-        message: "{VALUE} is not a valid job type",
-      },
+      default: "Not disclosed",
+    },
+    workMode: {
+      type: String,
+      enum: ["remote", "hybrid", "onsite"],
+      required: [true, "Work mode is required"],
+    },
+    employmentType: {
+      type: String,
+      enum: ["full-time", "part-time", "contract", "internship"],
+      required: [true, "Employment type is required"],
     },
     company: {
       type: mongoose.Schema.Types.ObjectId,
