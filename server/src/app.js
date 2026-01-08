@@ -5,10 +5,11 @@ import authRoutes from "./routes/authRoutes.js";
 import jobRoutes from "./routes/jobRoutes.js";
 import applicationRoutes from "./routes/applicationRoutes.js";
 import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
+import dotenv from "dotenv";
+dotenv.config();
 
 const app = express();
 
-// Global Middleware
 app.use(
   cors({
     origin: process.env.CLIENT_URL || "*",
