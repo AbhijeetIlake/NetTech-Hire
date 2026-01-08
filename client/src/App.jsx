@@ -1,10 +1,18 @@
-import React from 'react'
+// App.jsx
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import LoginPage from "./pages/LoginPage";
 import './index.css'
+import RegisterPage from "./pages/RegisterPage";
 
 function App() {
   return (
-    <div className='min-h-screen flex justify-center items-center text-6xl text-blue-500 font-extrabold'>App</div>
-  )
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/" element={<RegisterPage />} />
+      </Routes>
+    </BrowserRouter>
+  );
 }
 
-export default App
+export default App;
