@@ -2,6 +2,26 @@ import User from "../models/User.js";
 import generateToken from "../utils/generateToken.js";
 import asyncHandler from "../middleware/asyncHandler.js";
 
+/**
+ * Utility to set HTTP-only cookie
+ */
+const setCookie = (res, token) => {
+  res.cookie("token", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  });
+};
+
+
+// @desc    Get current logged-in user
+// @route   GET /api/auth/me
+// @access  Private
+export const getMeController = asyncHandler(async (req, res) => {
+  res.status(200).json(req.user);
+});
+
 // @desc    Register a new user
 // @route   POST /api/auth/register
 // @access  Public
@@ -29,13 +49,8 @@ export const registerUser = asyncHandler(async (req, res) => {
 
   if (user) {
     const token = generateToken(user._id);
+    setCookie(res, token);
 
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
 
     res.status(201).json({
       id: user._id,
@@ -65,13 +80,8 @@ export const loginUser = asyncHandler(async (req, res) => {
 
   if (user && (await user.matchPassword(password))) {
     const token = generateToken(user._id);
+    setCookie(res, token);
 
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
 
     res.status(200).json({
       id: user._id,
@@ -93,10 +103,13 @@ export const loginUser = asyncHandler(async (req, res) => {
 export const logoutUser = (req, res) => {
   res.cookie("token", "", {
     httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
     expires: new Date(0),
   });
   res.status(200).json({ message: "Logged out successfully" });
 };
+
 
 // @desc    Update user profile (Name, email, skills)
 // @route   PUT /api/auth/profile
@@ -155,4 +168,3 @@ export const uploadResume = asyncHandler(async (req, res) => {
     throw new Error("User not found");
   }
 });
-
