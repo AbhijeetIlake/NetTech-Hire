@@ -24,9 +24,9 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
-    skills: {
-      type: [String],
-      default: [],
+    profileImage: {
+      type: String,
+      default: null,
     },
     role: {
       type: String,

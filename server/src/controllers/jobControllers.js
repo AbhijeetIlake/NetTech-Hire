@@ -8,7 +8,7 @@ import asyncHandler from "../middleware/asyncHandler.js";
 // @access  Private (Applicant)
 export const getPublicJobs = asyncHandler(async (req, res) => {
   const jobs = await Job.find({ isActive: true })
-    .populate("company", "name email")
+    .populate("company", "name email profileImage")
     .sort({ createdAt: -1 });
 
   res.status(200).json(jobs);
@@ -18,7 +18,7 @@ export const getPublicJobs = asyncHandler(async (req, res) => {
 // @route   GET /api/jobs/:id
 // @access  Private (Applicant, Company)
 export const getJob = asyncHandler(async (req, res) => {
-  const job = await Job.findById(req.params.id).populate("company", "name email");
+  const job = await Job.findById(req.params.id).populate("company", "name email profileImage");
 
   if (!job) {
     res.status(404);

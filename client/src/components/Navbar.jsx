@@ -28,16 +28,17 @@ function Navbar() {
                   <>
                     <Link to="/applicant" className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">Find Jobs</Link>
                     <Link to="/applicant/applications" className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">My Applications</Link>
+                    <Link to="/applicant/profile" className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">Profile</Link>
                   </>
                 )}
                 {user.role === "company" && (
                   <>
                     <Link to="/company" className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">Post Job</Link>
                     <Link to="/company/jobs" className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">My Jobs</Link>
+                    <Link to="/company/profile" className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">Profile</Link>
                   </>
                 )}
                 <div className="flex items-center space-x-4 pl-4 border-l border-gray-200">
-                  <span className="text-sm font-medium text-gray-500">Hi, {user.name}</span>
                   <button
                     onClick={handleLogout}
                     className="text-sm font-bold text-red-600 hover:text-red-700 transition-colors"

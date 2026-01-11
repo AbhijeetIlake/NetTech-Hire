@@ -20,7 +20,6 @@ const applicationSchema = new mongoose.Schema(
           "shortlisted",
           "interview",
           "selected",
-          "joined",
           "rejected",
         ],
         message: "{VALUE} is not a valid status",

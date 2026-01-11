@@ -2,41 +2,53 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 
-// Ensure uploads directory exists
-const uploadDir = "uploads/resumes";
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-}
-
+// Storage Configuration
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, uploadDir);
+        let folder = "uploads/";
+        if (file.fieldname === "profileImage") {
+            folder += "profiles";
+        } else if (file.fieldname === "resume") {
+            folder += "resumes";
+        }
+
+        if (!fs.existsSync(folder)) {
+            fs.mkdirSync(folder, { recursive: true });
+        }
+        cb(null, folder);
     },
     filename: (req, file, cb) => {
-        // Naming convention: userId-timestamp-originalName
-        // We assume req.user is populated by auth middleware
         const userId = req.user ? req.user._id : "guest";
         cb(null, `${userId}-${Date.now()}${path.extname(file.originalname)}`);
     },
 });
 
+// File Filters
 const fileFilter = (req, file, cb) => {
-    const allowedTypes = [
-        "application/pdf",
-        "application/msword",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    ];
-
-    if (allowedTypes.includes(file.mimetype)) {
-        cb(null, true);
+    if (file.fieldname === "profileImage") {
+        if (file.mimetype.startsWith("image/")) {
+            cb(null, true);
+        } else {
+            cb(new Error("Only images are allowed for profile pictures."), false);
+        }
+    } else if (file.fieldname === "resume") {
+        const allowedTypes = [
+            "application/pdf",
+            "application/vnd.oasis.opendocument.text", // Support ODT just in case
+        ];
+        if (allowedTypes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error(`Invalid resume format (${file.mimetype}). Only PDF and ODT allowed.`), false);
+        }
     } else {
-        cb(new Error("Invalid file type. Only PDF, DOC, and DOCX are allowed."), false);
+        cb(new Error("Unexpected field."), false);
     }
 };
 
 const upload = multer({
     storage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
     fileFilter,
 });
 

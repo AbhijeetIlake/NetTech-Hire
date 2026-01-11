@@ -1,4 +1,6 @@
 import User from "../models/User.js";
+import fs from "fs";
+import path from "path";
 import generateToken from "../utils/generateToken.js";
 import asyncHandler from "../middleware/asyncHandler.js";
 
@@ -26,7 +28,7 @@ export const getMeController = asyncHandler(async (req, res) => {
 // @route   POST /api/auth/register
 // @access  Public
 export const registerUser = asyncHandler(async (req, res) => {
-  const { name, email, password, role, skills } = req.body;
+  const { name, email, password, role } = req.body;
 
   if (!name || !email || !password || !role) {
     res.status(400);
@@ -44,7 +46,6 @@ export const registerUser = asyncHandler(async (req, res) => {
     email,
     password,
     role,
-    skills: skills || [],
   });
 
   if (user) {
@@ -57,7 +58,7 @@ export const registerUser = asyncHandler(async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
-      skills: user.skills,
+      profileImage: user.profileImage,
     });
   } else {
     res.status(400);
@@ -89,7 +90,7 @@ export const loginUser = asyncHandler(async (req, res) => {
       email: user.email,
       role: user.role,
       resumePath: user.resumePath,
-      skills: user.skills, // Optional fields for frontend state
+      profileImage: user.profileImage,
     });
   } else {
     res.status(401);
@@ -120,9 +121,6 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
   if (user) {
     user.name = req.body.name || user.name;
     user.email = req.body.email || user.email;
-    if (req.body.skills) {
-      user.skills = req.body.skills;
-    }
 
     if (req.body.password) {
       user.password = req.body.password;
@@ -135,7 +133,7 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
       name: updatedUser.name,
       email: updatedUser.email,
       role: updatedUser.role,
-      skills: updatedUser.skills,
+      profileImage: updatedUser.profileImage,
       resumePath: updatedUser.resumePath,
     });
   } else {
@@ -144,27 +142,100 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc    Upload profile image
+// @route   PUT /api/auth/profile-image
+// @access  Private
+export const uploadProfileImage = asyncHandler(async (req, res) => {
+  if (!req.file) {
+    res.status(400);
+    throw new Error("No image file uploaded");
+  }
+
+  const normalizedPath = req.file.path.replace(/\\/g, "/");
+
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      res.status(404);
+      throw new Error("User not found");
+    }
+
+    const oldPath = user.profileImage;
+
+    // Use findByIdAndUpdate to avoid pre-save hooks/validation issues
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id,
+      { profileImage: normalizedPath },
+      { new: true }
+    ).select("-password");
+
+    // Cleanup old file from disk
+    if (oldPath && oldPath !== normalizedPath) {
+      try {
+        if (fs.existsSync(oldPath)) {
+          fs.unlinkSync(oldPath);
+        }
+      } catch (err) {
+        console.error("Cleanup Error (Image):", err);
+      }
+    }
+
+    res.status(200).json({
+      message: "Profile photo updated",
+      user: updatedUser,
+    });
+  } catch (err) {
+    console.error("Upload Logic Error (Image):", err);
+    res.status(err.status || 500);
+    throw new Error(err.message || "Upload failed");
+  }
+});
+
 // @desc    Upload resume
 // @route   PUT /api/auth/resume
-// @access  Private (Applicant only usually, but generic user is fine)
+// @access  Private
 export const uploadResume = asyncHandler(async (req, res) => {
   if (!req.file) {
     res.status(400);
-    throw new Error("No file uploaded");
+    throw new Error("No resume file uploaded");
   }
 
-  const user = await User.findById(req.user._id);
+  const normalizedPath = req.file.path.replace(/\\/g, "/");
 
-  if (user) {
-    user.resumePath = req.file.path;
-    const updatedUser = await user.save();
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      res.status(404);
+      throw new Error("User not found");
+    }
+
+    const oldPath = user.resumePath;
+
+    // Use findByIdAndUpdate to avoid pre-save hooks/validation issues
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id,
+      { resumePath: normalizedPath },
+      { new: true }
+    ).select("-password");
+
+    // Cleanup old file from disk
+    if (oldPath && oldPath !== normalizedPath) {
+      try {
+        if (fs.existsSync(oldPath)) {
+          fs.unlinkSync(oldPath);
+        }
+      } catch (err) {
+        console.error("Cleanup Error (Resume):", err);
+      }
+    }
 
     res.status(200).json({
-      message: "Resume uploaded successfully",
-      resumePath: updatedUser.resumePath,
+      message: "Resume updated",
+      user: updatedUser,
     });
-  } else {
-    res.status(404);
-    throw new Error("User not found");
+  } catch (err) {
+    console.error("Upload Logic Error (Resume):", err);
+    res.status(err.status || 500);
+    throw new Error(err.message || "Upload failed");
   }
 });

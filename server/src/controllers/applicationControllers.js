@@ -51,7 +51,7 @@ export const getMyApplications = asyncHandler(async (req, res) => {
             select: "title location workMode employmentType salaryRange company",
             populate: {
                 path: "company",
-                select: "name email",
+                select: "name email profileImage",
             },
         })
         .sort({ createdAt: -1 });
@@ -78,7 +78,7 @@ export const getApplicationsForJob = asyncHandler(async (req, res) => {
     }
 
     const applications = await Application.find({ job: job._id })
-        .populate("applicant", "name email resumePath skills")
+        .populate("applicant", "name email resumePath profileImage")
         .sort({ createdAt: -1 });
 
     res.status(200).json(applications);
@@ -114,4 +114,21 @@ export const updateApplication = asyncHandler(async (req, res) => {
         message: "Application status updated",
         application,
     });
+});
+
+// @desc    Get all applications for jobs owned by the company
+// @route   GET /api/applications/recruiter
+// @access  Private (Company)
+export const getRecruiterApplications = asyncHandler(async (req, res) => {
+    // 1. Find all jobs owned by this company
+    const jobs = await Job.find({ company: req.user._id }).select("_id");
+    const jobIds = jobs.map(j => j._id);
+
+    // 2. Find all applications for those jobs
+    const applications = await Application.find({ job: { $in: jobIds } })
+        .populate("applicant", "name email resumePath profileImage")
+        .populate("job", "title")
+        .sort({ createdAt: -1 });
+
+    res.status(200).json(applications);
 });
