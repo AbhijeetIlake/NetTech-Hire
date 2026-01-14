@@ -7,10 +7,12 @@ import asyncHandler from "../middleware/asyncHandler.js";
  * Utility to set HTTP-only cookie (production-ready)
  */
 const setCookie = (res, token) => {
+  const isProduction = process.env.NODE_ENV === "production";
+
   res.cookie("token", token, {
     httpOnly: true,                                       // JS cannot access
-    secure: process.env.NODE_ENV === "production",        // true in production
-    sameSite: process.env.NODE_ENV === "production" ? "None" : "Strict", // cross-site in prod
+    secure: isProduction,                                 // true in production (requires HTTPS)
+    sameSite: isProduction ? "None" : "Lax",             // None for cross-site in prod, Lax for dev
     maxAge: 7 * 24 * 60 * 60 * 1000,                     // 7 days
   });
 };
@@ -93,10 +95,12 @@ export const loginUser = asyncHandler(async (req, res) => {
 // @route   POST /api/auth/logout
 // @access  Public
 export const logoutUser = (req, res) => {
+  const isProduction = process.env.NODE_ENV === "production";
+
   res.cookie("token", "", {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: process.env.NODE_ENV === "production" ? "None" : "Strict",
+    secure: isProduction,
+    sameSite: isProduction ? "None" : "Lax",
     expires: new Date(0),
   });
   res.status(200).json({ message: "Logged out successfully" });

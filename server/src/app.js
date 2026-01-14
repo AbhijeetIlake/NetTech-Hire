@@ -57,8 +57,14 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Robust CORS configuration
+const clientUrl = process.env.CLIENT_URL ? process.env.CLIENT_URL.replace(/\/$/, "") : "http://localhost:5173";
+if (!isDevelopment && !process.env.CLIENT_URL) {
+  console.warn("WARNING: CLIENT_URL environment variable is not set in production!");
+}
+
 app.use(cors({
-  origin: process.env.CLIENT_URL || "http://localhost:5173", // Explicit fallback for dev
+  origin: clientUrl,
   credentials: true,
 }));
 
