@@ -18,6 +18,7 @@ import ApplicantProfile from "./pages/applicant/ApplicantProfile";
 import CompanyProfile from "./pages/company/CompanyProfile";
 
 import { useAuth } from "./context/AuthContext";
+import LoadingSpinner from "./components/LoadingSpinner";
 import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -25,14 +26,7 @@ function App() {
   const { loading } = useAuth();
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-[#FDFDFD]">
-        <div className="flex flex-col items-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-blue-600 mb-4"></div>
-          <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Initializing NetTech Hire</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner fullScreen={true} message="Initializing NetTech Hire" />;
   }
 
   return (
