@@ -11,6 +11,20 @@ const api = axios.create({
   },
 });
 
+// Request Interceptor to add token to headers
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 // Response Interceptor for global error handling
 api.interceptors.response.use(
   (response) => response,

@@ -53,6 +53,7 @@ export const registerUser = asyncHandler(async (req, res) => {
       email: user.email,
       role: user.role,
       profileImage: user.profileImage,
+      token, // Include token for header-based auth
     });
   } else {
     res.status(400);
@@ -84,6 +85,7 @@ export const loginUser = asyncHandler(async (req, res) => {
       role: user.role,
       resumePath: user.resumePath,
       profileImage: user.profileImage,
+      token, // Include token for header-based auth
     });
   } else {
     res.status(401);

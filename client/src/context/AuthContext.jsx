@@ -13,6 +13,7 @@ export const AuthProvider = ({ children }) => {
       setUser(res.data);
     } catch (error) {
       setUser(null);
+      localStorage.removeItem("token");
     } finally {
       setLoading(false);
     }
@@ -22,10 +23,19 @@ export const AuthProvider = ({ children }) => {
     fetchUser();
   }, []);
 
+  const handleSetUser = (userData) => {
+    if (userData && userData.token) {
+      localStorage.setItem("token", userData.token);
+    } else if (!userData) {
+      localStorage.removeItem("token");
+    }
+    setUser(userData);
+  };
+
   const logOut = async () => {
     try {
       await api.post("/auth/logout");
-      setUser(null);
+      handleSetUser(null);
     } catch (error) {
       console.error("Logout failed:", error);
     }
@@ -37,7 +47,7 @@ export const AuthProvider = ({ children }) => {
         user,
         isAuthenticated: !!user,
         loading,
-        setUser,
+        setUser: handleSetUser,
         logOut,
         refreshUser: fetchUser,
       }}
