@@ -1,21 +1,19 @@
 import User from "../models/User.js";
 import fs from "fs";
-import path from "path";
 import generateToken from "../utils/generateToken.js";
 import asyncHandler from "../middleware/asyncHandler.js";
 
 /**
- * Utility to set HTTP-only cookie
+ * Utility to set HTTP-only cookie (production-ready)
  */
 const setCookie = (res, token) => {
   res.cookie("token", token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    httpOnly: true,                                       // JS cannot access
+    secure: process.env.NODE_ENV === "production",        // true in production
+    sameSite: process.env.NODE_ENV === "production" ? "None" : "Strict", // cross-site in prod
+    maxAge: 7 * 24 * 60 * 60 * 1000,                     // 7 days
   });
 };
-
 
 // @desc    Get current logged-in user
 // @route   GET /api/auth/me
@@ -41,17 +39,11 @@ export const registerUser = asyncHandler(async (req, res) => {
     throw new Error("Email already registered");
   }
 
-  const user = await User.create({
-    name,
-    email,
-    password,
-    role,
-  });
+  const user = await User.create({ name, email, password, role });
 
   if (user) {
     const token = generateToken(user._id);
     setCookie(res, token);
-
 
     res.status(201).json({
       id: user._id,
@@ -83,7 +75,6 @@ export const loginUser = asyncHandler(async (req, res) => {
     const token = generateToken(user._id);
     setCookie(res, token);
 
-
     res.status(200).json({
       id: user._id,
       name: user.name,
@@ -105,12 +96,11 @@ export const logoutUser = (req, res) => {
   res.cookie("token", "", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    sameSite: process.env.NODE_ENV === "production" ? "None" : "Strict",
     expires: new Date(0),
   });
   res.status(200).json({ message: "Logged out successfully" });
 };
-
 
 // @desc    Update user profile (Name, email, skills)
 // @route   PUT /api/auth/profile
@@ -118,28 +108,25 @@ export const logoutUser = (req, res) => {
 export const updateUserProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
 
-  if (user) {
-    user.name = req.body.name || user.name;
-    user.email = req.body.email || user.email;
-
-    if (req.body.password) {
-      user.password = req.body.password;
-    }
-
-    const updatedUser = await user.save();
-
-    res.status(200).json({
-      id: updatedUser._id,
-      name: updatedUser.name,
-      email: updatedUser.email,
-      role: updatedUser.role,
-      profileImage: updatedUser.profileImage,
-      resumePath: updatedUser.resumePath,
-    });
-  } else {
+  if (!user) {
     res.status(404);
     throw new Error("User not found");
   }
+
+  user.name = req.body.name || user.name;
+  user.email = req.body.email || user.email;
+  if (req.body.password) user.password = req.body.password;
+
+  const updatedUser = await user.save();
+
+  res.status(200).json({
+    id: updatedUser._id,
+    name: updatedUser.name,
+    email: updatedUser.email,
+    role: updatedUser.role,
+    profileImage: updatedUser.profileImage,
+    resumePath: updatedUser.resumePath,
+  });
 });
 
 // @desc    Upload profile image
@@ -153,42 +140,28 @@ export const uploadProfileImage = asyncHandler(async (req, res) => {
 
   const normalizedPath = req.file.path.replace(/\\/g, "/");
 
-  try {
-    const user = await User.findById(req.user._id);
-    if (!user) {
-      res.status(404);
-      throw new Error("User not found");
-    }
-
-    const oldPath = user.profileImage;
-
-    // Use findByIdAndUpdate to avoid pre-save hooks/validation issues
-    const updatedUser = await User.findByIdAndUpdate(
-      req.user._id,
-      { profileImage: normalizedPath },
-      { new: true }
-    ).select("-password");
-
-    // Cleanup old file from disk
-    if (oldPath && oldPath !== normalizedPath) {
-      try {
-        if (fs.existsSync(oldPath)) {
-          fs.unlinkSync(oldPath);
-        }
-      } catch (err) {
-        console.error("Cleanup Error (Image):", err);
-      }
-    }
-
-    res.status(200).json({
-      message: "Profile photo updated",
-      user: updatedUser,
-    });
-  } catch (err) {
-    console.error("Upload Logic Error (Image):", err);
-    res.status(err.status || 500);
-    throw new Error(err.message || "Upload failed");
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    res.status(404);
+    throw new Error("User not found");
   }
+
+  const oldPath = user.profileImage;
+
+  const updatedUser = await User.findByIdAndUpdate(
+    req.user._id,
+    { profileImage: normalizedPath },
+    { new: true }
+  ).select("-password");
+
+  if (oldPath && oldPath !== normalizedPath && fs.existsSync(oldPath)) {
+    fs.unlinkSync(oldPath);
+  }
+
+  res.status(200).json({
+    message: "Profile photo updated",
+    user: updatedUser,
+  });
 });
 
 // @desc    Upload resume
@@ -202,40 +175,26 @@ export const uploadResume = asyncHandler(async (req, res) => {
 
   const normalizedPath = req.file.path.replace(/\\/g, "/");
 
-  try {
-    const user = await User.findById(req.user._id);
-    if (!user) {
-      res.status(404);
-      throw new Error("User not found");
-    }
-
-    const oldPath = user.resumePath;
-
-    // Use findByIdAndUpdate to avoid pre-save hooks/validation issues
-    const updatedUser = await User.findByIdAndUpdate(
-      req.user._id,
-      { resumePath: normalizedPath },
-      { new: true }
-    ).select("-password");
-
-    // Cleanup old file from disk
-    if (oldPath && oldPath !== normalizedPath) {
-      try {
-        if (fs.existsSync(oldPath)) {
-          fs.unlinkSync(oldPath);
-        }
-      } catch (err) {
-        console.error("Cleanup Error (Resume):", err);
-      }
-    }
-
-    res.status(200).json({
-      message: "Resume updated",
-      user: updatedUser,
-    });
-  } catch (err) {
-    console.error("Upload Logic Error (Resume):", err);
-    res.status(err.status || 500);
-    throw new Error(err.message || "Upload failed");
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    res.status(404);
+    throw new Error("User not found");
   }
+
+  const oldPath = user.resumePath;
+
+  const updatedUser = await User.findByIdAndUpdate(
+    req.user._id,
+    { resumePath: normalizedPath },
+    { new: true }
+  ).select("-password");
+
+  if (oldPath && oldPath !== normalizedPath && fs.existsSync(oldPath)) {
+    fs.unlinkSync(oldPath);
+  }
+
+  res.status(200).json({
+    message: "Resume updated",
+    user: updatedUser,
+  });
 });
