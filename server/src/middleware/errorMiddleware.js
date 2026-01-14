@@ -1,7 +1,12 @@
 const errorHandler = (err, req, res, next) => {
-    console.error("DEBUG ERROR:", err);
     let statusCode = res.statusCode === 200 ? 500 : res.statusCode;
     let message = err.message;
+
+    // Log the error to the console for debugging, but ignore 401 (Unauthorized) and 403 (Forbidden)
+    // as these are often expected behaviors rather than server issues.
+    if (statusCode !== 401 && statusCode !== 403) {
+        console.error("DEBUG ERROR:", err);
+    }
 
     // Mongoose bad ObjectId
     if (err.name === "CastError") {
